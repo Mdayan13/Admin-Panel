@@ -21,7 +21,6 @@ const { isAdmin } = require('./middleware/admin');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-
 require('dotenv').config();
 
 // Middleware
@@ -44,27 +43,21 @@ if (process.env.NODE_ENV === 'production') {
   app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
   });
-} else {
-  app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../client/', 'index.html'));
-  });
+}
+app.use(errorHandler);
+
+// Connect to database and then start the server
+const connectDB = require('./config/db');
+async function startServer() {
+  try {
+    await connectDB();
+    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
 }
 
-
-// Start server
-const connectDB = require('./config/db');
-connectDB().then(() => {
-  console.log('MongoDB connected successfully');
-  // Start server inside the then() to ensure DB is connected first
-  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-}).catch(err => {
-  console.error('Failed to connect to MongoDB', err);
-  process.exit(1);
-});
-process.on('unhandledRejection', (err) => {
-  console.log(`Error: ${err.message}`);
-  // Close server & exit process
-  process.exit(1);
-});
+startServer();
 
 module.exports = app; // Export for testing

@@ -16,23 +16,11 @@ const referralCodeSchema = new mongoose.Schema({
     ref: 'User',
     required: true,
   },
-  redeemedBy: {
+  redeemedByUserId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     default: null,
   },
-  isRedeemed: {
-    type: Boolean,
-    default: false,
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
-  redeemedAt: {
-    type: Date,
-    default: null,
-  },
-});
+}, { timestamps: true });
 
 module.exports = mongoose.model('ReferralCode', referralCodeSchema);

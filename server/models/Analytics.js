@@ -7,7 +7,7 @@ const AnalyticsEventSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: false
-  },
+  }
   
   // Type of event
   eventType: {

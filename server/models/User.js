@@ -23,11 +23,8 @@ const UserSchema = new mongoose.Schema({
   },
   telegramUsername: {
     type: String,
-    default: ''
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
+    default: '',
+    trim: true
   },
   lastLogin: {
     type: Date,
@@ -48,9 +45,10 @@ UserSchema.pre('save', async function(next) {
   }
 });
 
-// Method to compare passwords
-UserSchema.methods.comparePassword = async function(candidatePassword) {
+// Method to check passwords
+UserSchema.methods.checkPassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
+
 
 module.exports = mongoose.model('User', UserSchema);

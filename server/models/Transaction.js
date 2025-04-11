@@ -28,12 +28,12 @@ const transactionSchema = new mongoose.Schema({
     required: true
   },
   metadata: {
-    keyId: {
+    keyGeneratedId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Key'
     },
-    referralId: {
-      type: mongoose.Schema.Types.ObjectId,
+    referralCodeId: {
+       type: mongoose.Schema.Types.ObjectId,
       ref: 'ReferralCode'
     },
     notes: String

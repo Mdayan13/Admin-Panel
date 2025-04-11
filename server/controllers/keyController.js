@@ -17,26 +17,15 @@ exports.generateKey = async (req, res) => {
       return res.status(400).json({ message: 'Duration is required' });
     }
 
-    // Default maxDevices to 1 if not specified
     const devices = maxDevices || 1;
     
-    // Create the key
-    const key = await keyService.createKey(userId, duration, devices);
+    // Generate the key
+    const { key, newBalance } = await keyService.generateKey(userId, duration, devices);
     
-    res.status(201).json({ 
-      success: true, 
-      key: {
-        id: key._id,
-        keyString: key.keyString,
-        duration: key.duration,
-        expirationTime: key.expirationTime,
-        maxDevices: key.maxDevices,
-        price: key.price
-      }
-    });
+    res.status(201).json({ success: true, message: 'Key generated successfully.', key, newBalance });
   } catch (error) {
-    console.error('Error generating key:', error);
-    res.status(400).json({ 
+    console.error(error);
+    res.status(500).json({
       success: false, 
       message: error.message || 'Failed to generate key' 
     });
@@ -57,17 +46,14 @@ exports.getUserKeys = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
     
-    // Filtering
-    const filter = { createdBy: userId };
-    
+    // Filtering  
+    const filter = { userId: userId };
     if (req.query.status === 'active') {
       filter.isActive = true;
-      filter.expirationTime = { $gt: new Date() };
-    } else if (req.query.status === 'expired') {
-      filter.$or = [
-        { isActive: false },
-        { expirationTime: { $lte: new Date() } }
-      ];
+    } else if (req.query.status === 'inactive') {
+      filter.isActive = false;
+    } else {
+      delete filter.isActive; // Remove isActive filter for all keys      
     }
     
     // Get total count for pagination
@@ -77,17 +63,15 @@ exports.getUserKeys = async (req, res) => {
     const keys = await Key.find(filter)
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(limit);
+      .limit(limit); 
     
-    // Format keys for response
-    const formattedKeys = keys.map(key => ({
+      // Format keys for response
+      const formattedKeys = keys.map(key => ({
       id: key._id,
-      keyString: key.keyString,
+      keyCode: key.keyCode,
       duration: key.duration,
-      expirationTime: key.expirationTime,
+      expiresAt: key.expiresAt,
       createdAt: key.createdAt,
-      maxDevices: key.maxDevices,
-      activeDevices: key.activeDevices.length,
       isActive: key.isActive && key.expirationTime > new Date(),
       price: key.price,
       activatedAt: key.activatedAt,
@@ -105,11 +89,11 @@ exports.getUserKeys = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching keys:', error);
-    res.status(500).json({ 
+    console.error(error);
+    res.status(500).json({
       success: false, 
-      message: 'Failed to fetch keys' 
-    });
+      message: error.message || 'Failed to fetch keys' 
+    }); 
   }
 };
 
@@ -126,43 +110,22 @@ exports.getKeyById = async (req, res) => {
     const key = await Key.findById(keyId);
     
     if (!key) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Key not found' 
-      });
+      return res.status(404).json({ success: false, message: 'Key not found.' });
     }
     
     // Check if user is authorized to view this key
     const user = await User.findById(userId);
-    if (!user.isAdmin && key.createdBy.toString() !== userId) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Not authorized to view this key' 
-      });
+    if (user.role !== 'admin' && key.userId.toString() !== userId) {      
+      return res.status(403).json({ success: false, message: 'Unauthorized to view this key.' });
     }
     
-    res.json({
-      success: true,
-      key: {
-        id: key._id,
-        keyString: key.keyString,
-        duration: key.duration,
-        expirationTime: key.expirationTime,
-        createdAt: key.createdAt,
-        maxDevices: key.maxDevices,
-        activeDevices: key.activeDevices,
-        isActive: key.isActive && key.expirationTime > new Date(),
-        price: key.price,
-        activatedAt: key.activatedAt,
-        lastUsed: key.lastUsed
-      }
-    });
+    res.status(200).json({ success: true, message: 'Key retrieved successfully.', key });
   } catch (error) {
     console.error('Error fetching key:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false, 
       message: 'Failed to fetch key' 
-    });
+    }); 
   }
 };
 
@@ -175,23 +138,19 @@ exports.deactivateKey = async (req, res) => {
   try {
     const keyId = req.params.id;
     const userId = req.user.id;
-    
+
+    // Deactivate the key
     const deactivatedKey = await keyService.deactivateKey(keyId, userId);
     
-    res.json({
-      success: true,
-      message: 'Key deactivated successfully',
-      key: {
-        id: deactivatedKey._id,
-        keyString: deactivatedKey.keyString,
-        isActive: false
-      }
-    });
+    // Respond with the deactivated key
+    res.status(200).json({ success: true, message: 'Key deactivated successfully.', key: { id: deactivatedKey._id, isActive: deactivatedKey.isActive } });
   } catch (error) {
+    // Handle errors
+
     console.error('Error deactivating key:', error);
-    res.status(400).json({ 
-      success: false, 
-      message: error.message || 'Failed to deactivate key' 
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to deactivate key', // Consistent message
     });
   }
 };
@@ -204,30 +163,16 @@ exports.deactivateKey = async (req, res) => {
 exports.validateKey = async (req, res) => {
   try {
     const { keyString, deviceId } = req.body;
-    
     if (!keyString || !deviceId) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Key and device ID are required' 
-      });
+      return res.status(400).json({ success: false, message: 'Key and device ID are required.' }); // Clear message
     }
-    
+
     const result = await keyService.validateKey(keyString, deviceId);
-    
     if (!result.valid) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid key',
-        reason: result.reason
-      });
+      return res.status(401).json({ success: false, message: result.message });
     }
     
-    res.json({
-      success: true,
-      message: 'Key is valid',
-      expiresAt: result.expiresAt,
-      duration: result.duration
-    });
+    res.status(200).json({ success: true, message: 'Key validated successfully.', expiresAt: result.expiresAt, tierName: result.tierName });
   } catch (error) {
     console.error('Error validating key:', error);
     res.status(500).json({ 
@@ -244,16 +189,10 @@ exports.validateKey = async (req, res) => {
  */
 exports.getKeyPricing = async (req, res) => {
   try {
-    // Format pricing for UI
-    const pricing = Object.entries(keyService.PRICING).map(([duration, price]) => ({
-      duration,
-      price,
-      label: `₹${price}/${duration}`
-    }));
-    
-    res.json({
+    const pricing = await keyService.getPricingTiers();
+    res.status(200).json({
       success: true,
-      pricing
+      pricing, message: 'Pricing retrieved successfully.'
     });
   } catch (error) {
     console.error('Error fetching pricing:', error);

@@ -8,14 +8,16 @@ const {
 const { protect } = require('../middleware/auth');
 const { validateRegister, validateLogin } = require('../middleware/validators');
 
-const router = express.Router();
+const router = express.Router()
 
 // Public routes
-router.post('/auth/register', validateRegister, register);
-router.post('/auth/login', validateLogin, login);
-router.post('/auth/admin/login', validateLogin, adminLogin);
+router.post('/register', validateRegister, register)
+router.post('/login', validateLogin, login)
 
 // Protected routes
-router.get('/getMe', protect, getMe);
+router.get('/verify', protect, getMe)
 
-module.exports = router;
+const authRouter = express.Router()
+authRouter.use('/api/auth', router)
+
+module.exports = authRouter

@@ -12,7 +12,20 @@ const useAuth = () => {
   const navigate = useNavigate();
   const [error, setError] = useState(null);
 
+  // Global error handling function
+    const handleError = (operation, error) => {
+        const message = error.response?.data?.message || error.message || `${operation} failed. Please try again.`;
+        setError(message);
+        return { success: false, error: message };
+    };
+
+    // Handle redirection based on user role
+    const handleRedirect = (user) => {
+        const path = user.role === 'admin' ? '/admin/dashboard' : '/user/dashboard';
+        navigate(path);
+    };
   // Check if user is already logged in on initial load
+
   useEffect(() => {
     const verifyAuth = async () => {
       setLoading(true);
@@ -37,30 +50,22 @@ const useAuth = () => {
   const handleLogin = async (credentials) => {
     setLoading(true);
     setError(null);
-    
     try {
       const response = await login(credentials);
       if (response.success) {
         setUser(response.user);
         setIsAuthenticated(true);
         setIsAdmin(response.user.role === 'admin');
-        
-        // Redirect based on user role
-        if (response.user.role === 'admin') {
-          navigate('/admin/dashboard');
-        } else {
-          navigate('/user/dashboard');
-        }
+        handleRedirect(response.user);
         return { success: true };
       }
     } catch (err) {
-      setError(err.message || 'Login failed. Please check your credentials.');
-      return { success: false, error: err.message };
+      return handleError('Login', err);
     } finally {
       setLoading(false);
     }
   };
-
+  
   // Handle user registration
   const handleRegister = async (userData) => {
     setLoading(true);
@@ -72,12 +77,11 @@ const useAuth = () => {
         setUser(response.user);
         setIsAuthenticated(true);
         setIsAdmin(false); // New users are never admins
-        navigate('/user/dashboard');
+        handleRedirect(response.user);
         return { success: true };
       }
     } catch (err) {
-      setError(err.message || 'Registration failed. Please try again.');
-      return { success: false, error: err.message };
+      return handleError('Registration', err);
     } finally {
       setLoading(false);
     }

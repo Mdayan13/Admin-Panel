@@ -6,7 +6,7 @@ const jwt = require('jsonwebtoken');
 const generateToken = (userId) => {
   return jwt.sign(
     { id: userId },
-    process.env.JWT_SECRET || 'your_jwt_secret_key',
+    process.env.JWT_SECRET,
     { expiresIn: '30d' }
   );
 };
@@ -18,7 +18,7 @@ const generateToken = (userId) => {
  */
  exports.register = async (req, res, next) => {
   try {
-    const { username, password, email } = req.body;
+    const { username, password } = req.body;
 
     // Check if username already exists
     const userExists = await User.findOne({ username });
@@ -30,7 +30,6 @@ const generateToken = (userId) => {
     const user = await User.create({
       username,
       password, // Will be hashed in the User model pre-save hook
-      email,
       role: 'rebrander', // Default role is rebrander
       balance: 0
     });
@@ -44,7 +43,6 @@ const generateToken = (userId) => {
       user: {
         id: user._id,
         username: user.username,
-        email: user.email,
         role: user.role,
         balance: user.balance
       }
@@ -75,7 +73,7 @@ const generateToken = (userId) => {
     }
 
     // Check if password matches
-    const isMatch = await user.matchPassword(password);
+    const isMatch = await user.checkPassword(password);
     if (!isMatch) {
       return next(new ErrorResponse('Invalid credentials', 401));
     }
@@ -89,7 +87,6 @@ const generateToken = (userId) => {
       user: {
         id: user._id,
         username: user.username,
-        email: user.email,
         role: user.role,
         balance: user.balance
       }
@@ -117,54 +114,8 @@ const generateToken = (userId) => {
       data: {
         id: user._id,
         username: user.username,
-        email: user.email,
-        role: user.role,
-        balance: user.balance,
-        createdAt: user.createdAt
-      }
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * @desc    Admin login
- * @route   POST /api/auth/admin/login
- * @access  Public
- */
- exports.adminLogin = async (req, res, next) => {
-  try {
-    const { username, password } = req.body;
-
-    // Validate username & password
-    if (!username || !password) {
-      return next(new ErrorResponse('Please provide username and password', 400));
-    }
-
-    // Check for admin user
-    const user = await User.findOne({ username, role: 'admin' }).select('+password');
-    if (!user) {
-      return next(new ErrorResponse('Invalid admin credentials', 401));
-    }
-
-    // Check if password matches
-    const isMatch = await user.matchPassword(password);
-    if (!isMatch) {
-      return next(new ErrorResponse('Invalid admin credentials', 401));
-    }
-
-    // Generate JWT token
-    const token = generateToken(user._id);
-
-    res.status(200).json({
-      success: true,
-      token,
-      user: {
-        id: user._id,
-        username: user.username,
-        email: user.email,
-        role: user.role
+        role: user.role,\
+        balance: user.balance
       }
     });
   } catch (error) {

@@ -1,11 +1,12 @@
 /**
  * Analytics Service
  * Handles tracking and reporting of key usage, sales, and user activity
- */
+ */// Analytics Service
 const Analytics = require('../models/Analytics');
 const User = require('../models/User');
 const Key = require('../models/Key');
 const Transaction = require('../models/Transaction');
+const ErrorResponse = require('../utils/errorTypes');
 
 /**
  * Track a new key generation event
@@ -20,7 +21,7 @@ const trackKeyGeneration = async (userId, keyId, duration, cost) => {
     const analytics = new Analytics({
       eventType: 'KEY_GENERATION',
       user: userId,
-      key: keyId,
+      keyGeneratedId: keyId,
       metadata: {
         duration,
         cost
@@ -28,8 +29,8 @@ const trackKeyGeneration = async (userId, keyId, duration, cost) => {
     });
 
     return await analytics.save();
-  } catch (error) {
-    console.error('Error tracking key generation:', error);
+  } catch (error) {    throw new ErrorResponse('Error tracking key generation', 500);
+    console.error('Error tracking key generation:', error); // Log the error for debugging
     throw error;
   }
 };
@@ -44,23 +45,23 @@ const trackKeyUsage = async (keyId, deviceId) => {
   try {
     const key = await Key.findById(keyId);
     if (!key) {
-      throw new Error('Key not found');
+      throw new ErrorResponse('Key not found', 404);
     }
 
     const analytics = new Analytics({
       eventType: 'KEY_USAGE',
-      key: keyId,
+      keyGeneratedId: keyId,
       user: key.generatedBy,
       metadata: {
         deviceId,
         remainingUses: key.remainingUses
       }
     });
-
+    
     return await analytics.save();
   } catch (error) {
-    console.error('Error tracking key usage:', error);
-    throw error;
+    console.error('Error tracking key usage:', error); // Log the error for debugging
+    throw new ErrorResponse('Error tracking key usage', 500);
   }
 };
 
@@ -83,8 +84,8 @@ const trackReferralRedemption = async (userId, referralCode, amount) => {
     });
 
     return await analytics.save();
-  } catch (error) {
-    console.error('Error tracking referral redemption:', error);
+  } catch (error) {    throw new ErrorResponse('Error tracking referral redemption', 500);
+    console.error('Error tracking referral redemption:', error); // Log the error for debugging
     throw error;
   }
 };
@@ -128,8 +129,8 @@ const getKeyGenerationStats = async (startDate, endDate, userId = null) => {
     ]);
 
     return stats[0] || { totalKeys: 0, totalRevenue: 0, averageDuration: 0 };
-  } catch (error) {
-    console.error('Error getting key generation stats:', error);
+  } catch (error) {    throw new ErrorResponse('Error getting key generation stats', 500);
+    console.error('Error getting key generation stats:', error); // Log the error for debugging
     throw error;
   }
 };
@@ -157,7 +158,7 @@ const getKeyUsageStats = async (startDate, endDate, userId = null) => {
       {
         $group: {
           _id: { keyId: '$key' },
-          usageCount: { $sum: 1 },
+          usageCount: { $sum: 1 },          throw new ErrorResponse('Error getting key usage stats', 500);
           uniqueDevices: { $addToSet: '$metadata.deviceId' }
         }
       },
@@ -180,8 +181,8 @@ const getKeyUsageStats = async (startDate, endDate, userId = null) => {
     ]);
 
     return stats[0] || { totalUsage: 0, uniqueKeysUsed: 0, averageUsagePerKey: 0 };
-  } catch (error) {
-    console.error('Error getting key usage stats:', error);
+  } catch (error) {    throw new ErrorResponse('Error getting key usage stats', 500);
+    console.error('Error getting key usage stats:', error); // Log the error for debugging
     throw error;
   }
 };
@@ -231,8 +232,8 @@ const getTopUsersByRevenue = async (startDate, endDate, limit = 10) => {
     ]);
 
     return topUsers;
-  } catch (error) {
-    console.error('Error getting top users by revenue:', error);
+  } catch (error) {    throw new ErrorResponse('Error getting top users by revenue', 500);
+    console.error('Error getting top users by revenue:', error); // Log the error for debugging
     throw error;
   }
 };
@@ -300,8 +301,8 @@ const getDailyAnalytics = async (days = 30, userId = null) => {
     ]);
 
     return dailyStats;
-  } catch (error) {
-    console.error('Error getting daily analytics:', error);
+  } catch (error) {    throw new ErrorResponse('Error getting daily analytics', 500);
+    console.error('Error getting daily analytics:', error); // Log the error for debugging
     throw error;
   }
 };

@@ -10,7 +10,12 @@
  */
 const isValidEmail = (email) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
+  const isValid = emailRegex.test(email);
+  return {
+    isValid,
+    message: isValid ? null : 'Invalid email format'
+  };
+
 };
 
 /**
@@ -24,11 +29,16 @@ const validatePassword = (password) => {
       isValid: false,
       message: 'Password must be at least 6 characters long'
     };
-  }
-  return { isValid: true };
+  }  // Check for at least one uppercase, one lowercase, and one number
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/;
+  const isValid = passwordRegex.test(password);
+  return {
+    isValid,
+    message: isValid ? null : 'Password must include at least one uppercase character, one lowercase character, and one number'
+  };
 };
 
-/**
+  /**
  * Validate username format
  * @param {string} username - Username to validate
  * @returns {Object} - Validation result with status and message
@@ -135,12 +145,16 @@ const validateKeyGeneration = (keyParams) => {
 /**
  * Validate referral code format
  * @param {string} code - Referral code to validate
- * @returns {boolean} - True if referral code format is valid
+ * @returns {object} - Object with isValid (boolean) and message (string)
  */
 const isValidReferralCode = (code) => {
   // Referral codes should be 8-12 characters alphanumeric
   const referralCodeRegex = /^[A-Z0-9]{8,12}$/;
-  return referralCodeRegex.test(code);
+  const isValid = referralCodeRegex.test(code);
+  return {
+    isValid,
+    message: isValid ? null : 'Referral code must be 8-12 alphanumeric characters'
+  };
 };
 
 module.exports = {

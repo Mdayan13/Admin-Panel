@@ -1,15 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import FeatureCard from '../components/common/FeatureCard';
+import Step from '../components/common/Step';
 
 const Home = () => {
-  const { isAuthenticated, user } = useAuth();
-
-  // Function to determine where to redirect authenticated users
-  const getDashboardLink = () => {
-    if (!isAuthenticated) return '/login';
-    return user?.role === 'admin' ? '/admin/dashboard' : '/user/dashboard';
-  };
+  const { isAuthenticated, handleRedirect, user } = useAuth();
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 text-white">
@@ -25,7 +21,7 @@ const Home = () => {
           <div className="flex flex-col sm:flex-row gap-4">
             {isAuthenticated ? (
               <Link
-                to={getDashboardLink()}
+                to={handleRedirect(user)}
                 className="px-8 py-3 bg-blue-600 hover:bg-blue-700 rounded-md font-medium transition duration-300"
               >
                 Go to Dashboard
@@ -124,24 +120,5 @@ const Home = () => {
     </div>
   );
 };
-
-// Helper Components
-const FeatureCard = ({ title, description, icon }) => (
-  <div className="bg-gray-700 p-6 rounded-lg text-center">
-    <div className="text-4xl mb-4">{icon}</div>
-    <h3 className="text-xl font-semibold mb-2">{title}</h3>
-    <p className="text-gray-300">{description}</p>
-  </div>
-);
-
-const Step = ({ number, title, description }) => (
-  <div className="ml-10 md:ml-16 mb-10 relative">
-    <div className="absolute -left-10 md:-left-16 bg-blue-600 w-8 h-8 rounded-full flex items-center justify-center">
-      {number}
-    </div>
-    <h3 className="text-xl font-semibold mb-2">{title}</h3>
-    <p className="text-gray-300">{description}</p>
-  </div>
-);
 
 export default Home;
